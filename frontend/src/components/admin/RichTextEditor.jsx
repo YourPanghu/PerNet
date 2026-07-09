@@ -131,8 +131,6 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
   const [imageUrl, setImageUrl] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
   const isInternalChange = useRef(false);
-  const lastExternalValueRef = useRef(null); // 初始为 null，强制首次同步
-  const editorReadyRef = useRef(false);
   const { message } = App.useApp();
 
   const editor = useEditor({
@@ -155,12 +153,13 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     onUpdate: ({ editor: ed }) => {
       isInternalChange.current = true;
       const html = ed.getHTML();
-      lastExternalValueRef.current = html;
       onChange?.(html);
     },
   });
 
   // 外部 value 变化时同步到编辑器
+  // 使用 key 变化检测 + 单向同步
+  const prevValueRef = useRef(value);
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     // 跳过内部编辑触发的更新
@@ -168,24 +167,26 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
       isInternalChange.current = false;
       return;
     }
-    // 外部 value 与编辑器内容不同时，同步（包括首次加载）
-    const editorHTML = editor.getHTML();
-    if (value !== undefined && value !== editorHTML) {
-      lastExternalValueRef.current = value;
-      editor.commands.setContent(value || '');
+    const currentContent = value ?? '';
+    const editorContent = editor.getHTML();
+    // 仅在 value 引用变化且内容不一致时同步
+    if (value !== undefined && value !== prevValueRef.current) {
+      prevValueRef.current = value;
+      if (currentContent !== editorContent) {
+        editor.commands.setContent(currentContent);
+      }
     }
   }, [value, editor]);
 
-  // 编辑器就绪时同步初始内容
+  // 首次加载：编辑器就绪后立即填充内容
+  const initialLoadRef = useRef(false);
   useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
-    if (editorReadyRef.current) return;
-    editorReadyRef.current = true;
+    if (!editor || editor.isDestroyed || initialLoadRef.current) return;
+    initialLoadRef.current = true;
     if (value) {
       editor.commands.setContent(value);
-      lastExternalValueRef.current = value;
     }
-  }, [editor, value]);
+  }, [editor]);
 
   // 销毁时清理
   useEffect(() => {
