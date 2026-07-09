@@ -13,7 +13,7 @@ import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
-  Modal, InputNumber, Switch, Space, Button, Dropdown, Select, Divider, App,
+  Modal, InputNumber, Switch, Space, Button, Dropdown, Select, Divider, App, Upload, Tabs,
 } from 'antd';
 import {
   BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined,
@@ -23,7 +23,9 @@ import {
   CodeOutlined, ClearOutlined, BlockOutlined, InsertRowAboveOutlined,
   InsertRowBelowOutlined, DeleteRowOutlined, InsertRowRightOutlined,
   DeleteColumnOutlined, BorderHorizontalOutlined, DeleteOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
+import client from '../../api/client';
 
 // ---------- 表格插入弹窗 ----------
 function TableInsertModal({ open, onOk, onCancel }) {
@@ -127,6 +129,7 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const isInternalChange = useRef(false);
   const lastExternalValueRef = useRef(null); // 初始为 null，强制首次同步
   const editorReadyRef = useRef(false);
@@ -235,6 +238,26 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     editor.chain().focus().setImage({ src: imageUrl.trim() }).run();
     setImageUrl('');
     setImageModalOpen(false);
+  };
+
+  // 本地上传图片
+  const handleLocalUpload = async (file) => {
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await client.post('/admin/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      editor.chain().focus().setImage({ src: res.url }).run();
+      message.success('图片上传成功');
+      setImageModalOpen(false);
+    } catch {
+      message.error('图片上传失败');
+    } finally {
+      setImageUploading(false);
+    }
+    return false; // 阻止默认上传行为
   };
 
   const headingValue = editor.isActive('heading', { level: 1 }) ? 'h1'
@@ -402,23 +425,56 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
         onCancel={() => { setImageUrl(''); setImageModalOpen(false); }}
         okText="确定"
         cancelText="取消"
-        width={400}
+        width={480}
+        footer={null}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <span>图片 URL</span>
-          <InputNumber style={{ display: 'none' }} />
-          <input
-            type="url"
-            placeholder="https://example.com/image.jpg"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleImageSet(); }}
-            style={{
-              width: '100%', padding: '4px 11px', fontSize: 14, lineHeight: '30px',
-              border: '1px solid #d9d9d9', borderRadius: 6, outline: 'none', boxSizing: 'border-box',
-            }}
-          />
-        </Space>
+        <Tabs
+          items={[
+            {
+              key: 'url',
+              label: 'URL 插入',
+              children: (
+                <div style={{ paddingTop: 12 }}>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleImageSet(); }}
+                    style={{
+                      width: '100%', padding: '4px 11px', fontSize: 14, lineHeight: '30px',
+                      border: '1px solid #d9d9d9', borderRadius: 6, outline: 'none', boxSizing: 'border-box',
+                      marginBottom: 12,
+                    }}
+                  />
+                  <Button type="primary" onClick={handleImageSet} disabled={!imageUrl.trim()} block>
+                    插入图片
+                  </Button>
+                </div>
+              ),
+            },
+            {
+              key: 'upload',
+              label: '本地上传',
+              children: (
+                <div style={{ paddingTop: 12 }}>
+                  <Upload
+                    accept="image/*"
+                    showUploadList={false}
+                    beforeUpload={handleLocalUpload}
+                  >
+                    <Button icon={<UploadOutlined />} loading={imageUploading} block size="large" style={{ height: 80 }}>
+                      {imageUploading ? '上传中...' : '点击上传本地图片'}
+                    </Button>
+                  </Upload>
+                  <div style={{ textAlign: 'center', marginTop: 8, color: '#999', fontSize: 12 }}>
+                    支持 JPG、PNG、GIF、WebP，最大 10MB
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Modal>
     </>
   );
