@@ -150,32 +150,13 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
       TableHeader,
       Placeholder.configure({ placeholder }),
     ],
+    content: value, // 直接用 TipTap 内置的 content 属性接收外部值
     onUpdate: ({ editor: ed }) => {
       isInternalChange.current = true;
       const html = ed.getHTML();
       onChange?.(html);
     },
   });
-
-  // 单向同步：外部 value → 编辑器
-  // 使用 ref 追踪上一次外部 value 的"标识"，避免因为 HTML 标准化差异而反复 setContent
-  const lastExternalValueRef = useRef(undefined);
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
-
-    // 跳过用户编辑触发的更新（编辑器内容已是最新，不需要同步回来）
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
-
-    // value 是外部传入的权威内容（新建文章时为 undefined/''，编辑文章时为已有 HTML）
-    // 仅当外部 value 的"身份"发生变化时（如切换编辑另一篇文章），才同步
-    if (value !== undefined && value !== lastExternalValueRef.current) {
-      lastExternalValueRef.current = value;
-      editor.commands.setContent(value || '');
-    }
-  }, [value, editor]);
 
   // 销毁时清理
   useEffect(() => {
