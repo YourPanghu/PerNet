@@ -211,24 +211,23 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
   }, [editor, imageUrl]);
 
   // 本地上传图片
-  const handleLocalUpload = useCallback(async (file) => {
+  const handleLocalUpload = useCallback((file) => {
     setImageUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await client.post('/admin/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+    const formData = new FormData();
+    formData.append('file', file);
+    client.post('/admin/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((res) => {
       editor.chain().focus().setImage({ src: res.url }).run();
       message.success('图片上传成功');
       setImageModalOpen(false);
-    } catch {
-      message.error('图片上传失败');
-    } finally {
       setImageUploading(false);
-    }
-    return false;
-  }, [editor]);
+    }).catch(() => {
+      message.error('图片上传失败');
+      setImageUploading(false);
+    });
+    return false; // 阻止 Upload 默认行为
+  }, [editor, message]);
 
   const headingValue = editor.isActive('heading', { level: 1 }) ? 'h1'
     : editor.isActive('heading', { level: 2 }) ? 'h2'
