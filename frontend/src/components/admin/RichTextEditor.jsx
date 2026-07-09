@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -233,15 +233,15 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     editor.chain().focus().unsetLink().run();
   };
 
-  const handleImageSet = () => {
+  const handleImageSet = useCallback(() => {
     if (!imageUrl.trim()) return;
     editor.chain().focus().setImage({ src: imageUrl.trim() }).run();
     setImageUrl('');
     setImageModalOpen(false);
-  };
+  }, [editor, imageUrl]);
 
   // 本地上传图片
-  const handleLocalUpload = async (file) => {
+  const handleLocalUpload = useCallback(async (file) => {
     setImageUploading(true);
     try {
       const formData = new FormData();
@@ -257,8 +257,8 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     } finally {
       setImageUploading(false);
     }
-    return false; // 阻止默认上传行为
-  };
+    return false;
+  }, [editor]);
 
   const headingValue = editor.isActive('heading', { level: 1 }) ? 'h1'
     : editor.isActive('heading', { level: 2 }) ? 'h2'
