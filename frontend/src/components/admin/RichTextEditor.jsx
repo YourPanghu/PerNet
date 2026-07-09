@@ -1,16 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
-import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import { TableKit as Table } from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
   Modal, InputNumber, Switch, Space, Button, Dropdown, Select, Divider, App, Upload, Tabs,
@@ -137,17 +132,14 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        underline: false,
+        link: false,
       }),
-      Underline,
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      LinkExtension.configure({ openOnClick: false, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } }),
       ImageExtension.configure({ allowBase64: false, HTMLAttributes: { class: 'editor-image' } }),
       Table.configure({ resizable: true }),
-      TableRow,
-      TableCell,
-      TableHeader,
       Placeholder.configure({ placeholder }),
     ],
     content: value, // 直接用 TipTap 内置的 content 属性接收外部值
