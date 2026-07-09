@@ -128,7 +128,8 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const isInternalChange = useRef(false);
-  const lastExternalValueRef = useRef(value);
+  const lastExternalValueRef = useRef(null); // 初始为 null，强制首次同步
+  const editorReadyRef = useRef(false);
   const { message } = App.useApp();
 
   const editor = useEditor({
@@ -151,6 +152,7 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
     onUpdate: ({ editor: ed }) => {
       isInternalChange.current = true;
       const html = ed.getHTML();
+      lastExternalValueRef.current = html;
       onChange?.(html);
     },
   });
@@ -158,12 +160,29 @@ export default function RichTextEditor({ value, onChange, placeholder = '输入�
   // 外部 value 变化时同步到编辑器
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    if (!isInternalChange.current && value !== undefined && value !== lastExternalValueRef.current) {
+    // 跳过内部编辑触发的更新
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+    // 外部 value 与编辑器内容不同时，同步（包括首次加载）
+    const editorHTML = editor.getHTML();
+    if (value !== undefined && value !== editorHTML) {
       lastExternalValueRef.current = value;
       editor.commands.setContent(value || '');
     }
-    isInternalChange.current = false;
   }, [value, editor]);
+
+  // 编辑器就绪时同步初始内容
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    if (editorReadyRef.current) return;
+    editorReadyRef.current = true;
+    if (value) {
+      editor.commands.setContent(value);
+      lastExternalValueRef.current = value;
+    }
+  }, [editor, value]);
 
   // 销毁时清理
   useEffect(() => {
